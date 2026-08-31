@@ -1,0 +1,86 @@
+[tool.poetry]
+name = "bankstatementparser-loader-camt054"
+version = "0.0.1"
+description = "ISO 20022 CAMT.054 Bank-to-Customer Debit/Credit Notification loader for bankstatementparser."
+authors = ["Sebastien Rousseau <sebastian.rousseau@gmail.com>"]
+license = "Apache-2.0 OR MIT"
+readme = "README.md"
+repository = "https://github.com/sebastienrousseau/bankstatementparser-loader-camt054"
+homepage = "https://bankstatementparser.com"
+keywords = ["iso20022", "camt054", "camt.054", "bank", "notification", "transactions"]
+packages = [
+    { include = "bankstatementparser_loader_camt054" },
+]
+
+[tool.poetry.plugins."bankstatementparser.loaders"]
+camt054 = "bankstatementparser_loader_camt054.loader:Camt054StatementParser"
+camt_054 = "bankstatementparser_loader_camt054.loader:Camt054StatementParser"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<4.0"
+defusedxml = "^0.7.1"
+bankstatementparser = ">=0.0.18"
+
+[tool.poetry.group.dev.dependencies]
+pytest = ">=8.0.0,<10.0.0"
+pytest-cov = "^7.1.0"
+pytest-benchmark = "^5.1.0"
+ruff = ">=0.15.7,<0.17"
+mypy = ">=1.5,<3"
+bandit = "^1.7.0"
+hypothesis = ">=6.82,<7"
+interrogate = "^1.7.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 79
+target-version = "py310"
+extend-exclude = ["*.md", "tmp_env", ".venv", ".eggs"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "C4", "UP"]
+ignore = ["E501"]
+
+[tool.mypy]
+strict = true
+warn_return_any = true
+warn_unused_ignores = true
+disallow_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = [
+    "bankstatementparser.*",
+    "pandas.*",
+    "defusedxml.*",
+    "xml.etree.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "bankstatementparser_loader_camt054.loader"
+disallow_subclassing_any = false
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+ignore_errors = true
+
+[tool.interrogate]
+ignore-init-method = false
+ignore-init-module = false
+ignore-magic = false
+ignore-semiprivate = false
+ignore-private = false
+ignore-property-decorators = false
+ignore-module = false
+fail-under = 100
+exclude = ["setup.py", "docs", "build", "tests", ".venv"]
+verbose = 2
+quiet = false
+color = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=bankstatementparser_loader_camt054 --cov-report=term-missing --cov-report=xml --cov-fail-under=100"
