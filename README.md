@@ -93,7 +93,9 @@ for tx in transactions:
 # Extract batch metadata and notification summary
 summary = summarize_camt054(open("notification.xml").read())
 print(f"Message ID: {summary.message_id}")
-print(f"Total Entries: {summary.total_entries} | Credit: {summary.total_credit} | Debit: {summary.total_debit}")
+print(
+    f"Total Entries: {summary.entry_count} | Credit: {summary.total_credit} | Debit: {summary.total_debit}"
+)
 ```
 
 ---

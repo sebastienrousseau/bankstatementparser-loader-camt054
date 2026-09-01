@@ -31,4 +31,4 @@ def test_readme_examples() -> None:
 
     summary = summarize_camt054(sample)
     assert summary.message_id == "MSG-2026-001"
-    assert summary.total_entries == 1
+    assert summary.entry_count == 1
