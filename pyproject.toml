@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "bankstatementparser-loader-camt054"
-version = "0.0.1"
+version = "0.0.19"
 description = "ISO 20022 CAMT.054 Bank-to-Customer Debit/Credit Notification loader for bankstatementparser."
 authors = ["Sebastien Rousseau <sebastian.rousseau@gmail.com>"]
 license = "Apache-2.0 OR MIT"

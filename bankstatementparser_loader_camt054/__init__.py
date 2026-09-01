@@ -17,7 +17,7 @@ from .loader import (
     summarize_camt054,
 )
 
-__version__ = "0.0.1"
+__version__ = "0.0.19"
 __all__ = [
     "Camt054NotificationSummary",
     "Camt054StatementParser",
