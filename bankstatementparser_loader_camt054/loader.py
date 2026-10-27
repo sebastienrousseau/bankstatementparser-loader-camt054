@@ -16,6 +16,7 @@ from typing import Any
 import defusedxml.ElementTree as DefusedET
 import pandas as pd
 from bankstatementparser.base_parser import BankStatementParser
+from bankstatementparser.record_types import SummaryRecord
 from bankstatementparser.transaction_models import Transaction
 
 SOURCE = "camt054"
@@ -80,6 +81,20 @@ class Camt054NotificationSummary:
     entry_count: int
     total_credit: Decimal
     total_debit: Decimal
+
+
+class Camt054SummaryRecord(SummaryRecord, total=False):
+    """``get_summary()`` result: the core summary keys plus camt.054 counts.
+
+    A ``SummaryRecord`` subtype, so the override matches the base parser's
+    contract while keeping every key this loader has always returned.
+    """
+
+    creation_date: str | None
+    notification_count: int
+    entry_count: int
+    total_credit: float
+    total_debit: float
 
 
 def _extract_account_id(acct_elem: ET.Element | None) -> str | None:
@@ -421,7 +436,7 @@ class Camt054StatementParser(BankStatementParser):
         """
         return load_camt054_file(self.file_name)
 
-    def get_summary(self) -> dict[str, Any]:
+    def get_summary(self) -> Camt054SummaryRecord:
         """Get summary metadata and balance metrics for the CAMT.054 notification file.
 
         Returns:
