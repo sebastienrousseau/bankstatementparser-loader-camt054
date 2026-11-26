@@ -1,0 +1,35 @@
+{
+  "bankstatementparser_loader_camt054/loader.py::_parse_camt054_xml": {
+    "cognitive": 22,
+    "cyclomatic": 13
+  },
+  "bankstatementparser_loader_camt054/loader.py::_process_entry": {
+    "cognitive": 21,
+    "cyclomatic": 20,
+    "lines": 62
+  },
+  "bankstatementparser_loader_camt054/loader.py::_process_tx_detail": {
+    "cognitive": 24,
+    "cyclomatic": 22,
+    "lines": 65
+  },
+  "tests/test_loader.py::_sample_camt054_xml": {
+    "lines": 76
+  },
+  "tests/test_loader.py::test_camt054_statement_parser_class": {
+    "cyclomatic": 11
+  },
+  "tests/test_loader.py::test_helper_functions": {
+    "cyclomatic": 14
+  },
+  "tests/test_loader.py::test_load_camt054_full_payload": {
+    "cyclomatic": 17
+  },
+  "tests/test_suite_conformance.py": {
+    "file_lines": 678
+  },
+  "tests/test_suite_conformance.py::_dev_spec": {
+    "cognitive": 23,
+    "cyclomatic": 12
+  }
+}
