@@ -19,7 +19,7 @@ camt_054 = "bankstatementparser_loader_camt054.loader:Camt054StatementParser"
 [tool.poetry.dependencies]
 python = ">=3.10,<4.0"
 defusedxml = "^0.7.1"
-bankstatementparser = ">=0.0.18"
+bankstatementparser = ">=0.0.34"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.0.0,<10.0.0"
