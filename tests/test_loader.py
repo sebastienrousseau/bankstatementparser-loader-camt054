@@ -112,7 +112,7 @@ def _sample_camt054_xml() -> str:
 
 def test_version() -> None:
     """Verifies that version is exposed and semantic."""
-    assert __version__ == "0.0.19"
+    assert __version__ == "0.0.35"
 
 
 def test_load_camt054_full_payload() -> None:
@@ -309,3 +309,38 @@ def test_fuzz_clean_tag(tag_suffix: str) -> None:
     """Property-based fuzzing of tag cleaner."""
     elem = ET.Element(f"{{urn:iso:std:test}}{tag_suffix}")
     assert _clean_tag(elem) == tag_suffix
+
+
+def test_find_date_skips_an_empty_date_node() -> None:
+    """A matching node with no Dt, DtTm or text yields no date."""
+    root = ET.fromstring("<Ntry><BookgDt/></Ntry>")
+    assert _find_date(root, "BookgDt") is None
+
+
+def test_detail_amount_without_currency_keeps_entry_currency() -> None:
+    """A TxDtls amount with no Ccy overrides the amount, not the currency."""
+    xml_str = """<Document><BkToCstmrDbtCdtNtfctn><Ntfctn>
+        <Ntry>
+            <Amt Ccy="EUR">50.00</Amt>
+            <CdtDbtInd>CRDT</CdtDbtInd>
+            <NtryDtls>
+                <TxDtls>
+                    <AmtDtls><TxAmt><Amt>20.00</Amt></TxAmt></AmtDtls>
+                </TxDtls>
+            </NtryDtls>
+        </Ntry>
+    </Ntfctn></BkToCstmrDbtCdtNtfctn></Document>"""
+    (tx,) = load_camt054(xml_str)
+    assert tx.amount == Decimal("20.00")
+    assert tx.currency == "EUR"
+
+
+def test_summary_is_read_once_and_cached(tmp_path: Path) -> None:
+    """A second get_summary() call reuses the first result."""
+    sample_file = tmp_path / "notification.xml"
+    sample_file.write_text(_sample_camt054_xml(), encoding="utf-8")
+    parser = Camt054StatementParser(sample_file)
+
+    first = parser.get_summary()
+    sample_file.unlink()
+    assert parser.get_summary() == first
