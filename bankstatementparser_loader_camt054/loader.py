@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import os
+import re
 import xml.etree.ElementTree as ET  # nosec B405
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -20,6 +21,17 @@ from bankstatementparser.record_types import SummaryRecord
 from bankstatementparser.transaction_models import Transaction
 
 SOURCE = "camt054"
+
+# An ISO 20022 amount: unsigned ASCII digits with an optional decimal
+# part (the sign is CdtDbtInd's). Decimal() also takes NaN, Infinity,
+# exponents, "_" separators, a sign and other scripts' digits.
+_AMOUNT = re.compile(r"[0-9]+(?:\.[0-9]+)?")
+
+
+def _parse_amount(text: str) -> Decimal | None:
+    """Return ``text`` as a ``Decimal``, or ``None`` if it is no amount."""
+    clean = text.strip()
+    return Decimal(clean) if _AMOUNT.fullmatch(clean) else None
 
 
 def _clean_tag(elem: ET.Element) -> str:
@@ -114,6 +126,35 @@ def _extract_party_name(party_elem: ET.Element | None) -> str | None:
     return _find_text(party_elem, "Nm")
 
 
+def _apply_detail_amount(
+    tx_elem: ET.Element, base_entry: dict[str, Any], row: dict[str, Any]
+) -> None:
+    """Override ``row``'s amount with the detail's own, if it has one.
+
+    The first ``TxAmt`` or ``Amt`` with text in ``tx_elem`` is the
+    detail amount, signed like the entry. One that is not an ISO 20022
+    decimal is ignored, keeping the entry's amount and currency.
+    """
+    amt_elem = next(
+        (
+            child
+            for child in tx_elem.iter()
+            if _clean_tag(child) in ("TxAmt", "Amt")
+            and child.text
+            and child.text.strip()
+        ),
+        None,
+    )
+    if amt_elem is None or amt_elem.text is None:
+        return
+    val = _parse_amount(amt_elem.text)
+    if val is None:
+        return
+    row["amount"] = val if base_entry.get("is_credit", True) else -val
+    if "Ccy" in amt_elem.attrib:
+        row["currency"] = amt_elem.attrib["Ccy"]
+
+
 def _process_tx_detail(
     tx_elem: ET.Element,
     base_entry: dict[str, Any],
@@ -133,25 +174,7 @@ def _process_tx_detail(
     )
     row["mandate_id"] = mndt_id
 
-    # Amount override if present in transaction detail
-    amt_elem = None
-    for child in tx_elem.iter():
-        if (
-            _clean_tag(child) in ("TxAmt", "Amt")
-            and child.text
-            and child.text.strip()
-        ):
-            amt_elem = child
-            break
-    if amt_elem is not None and amt_elem.text:
-        try:
-            val = Decimal(amt_elem.text.strip())
-            is_credit = base_entry.get("is_credit", True)
-            row["amount"] = val if is_credit else -val
-            if "Ccy" in amt_elem.attrib:
-                row["currency"] = amt_elem.attrib["Ccy"]
-        except Exception:  # noqa: S110 # nosec B110
-            pass
+    _apply_detail_amount(tx_elem, base_entry, row)
 
     # Counterparty details
     for child in tx_elem.iter():
@@ -198,9 +221,8 @@ def _process_entry(
     if amt_elem is None or not amt_elem.text:
         return
 
-    try:
-        raw_amt = Decimal(amt_elem.text.strip())
-    except Exception:
+    raw_amt = _parse_amount(amt_elem.text)
+    if raw_amt is None:
         return
 
     currency = amt_elem.attrib.get("Ccy") or default_currency or "EUR"
