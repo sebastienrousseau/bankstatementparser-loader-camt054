@@ -55,6 +55,7 @@ one version across every package, at 0.0.35.
 ## [0.0.19] - 2026-09-01
 
 ### Added
+
 - Initial production release of `bankstatementparser-loader-camt054`: ISO 20022 CAMT.054 Real-Time Notification Loader.
 - 100% statement and branch test coverage.
 - High-concurrency throughput testing (>10,000 TPS) with sub-second response times.
