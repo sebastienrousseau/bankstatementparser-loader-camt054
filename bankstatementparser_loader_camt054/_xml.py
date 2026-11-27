@@ -84,3 +84,30 @@ def _extract_party_name(party_elem: ET.Element | None) -> str | None:
     if party_elem is None:
         return None
     return _find_text(party_elem, "Nm")
+
+
+def _first(elem: ET.Element, tag_name: str) -> ET.Element | None:
+    """Return the first descendant of ``elem`` with local tag ``tag_name``."""
+    return next(
+        (child for child in elem.iter() if _clean_tag(child) == tag_name),
+        None,
+    )
+
+
+def _bank_transaction_code(ntry_elem: ET.Element) -> str | None:
+    """Return an entry's bank transaction code, if it has one.
+
+    Text directly in ``BkTxCd`` or ``Prtry`` is kept for the files that
+    put it there; otherwise the schema's nested ``BkTxCd/Prtry/Cd`` (the
+    bank's own code) wins over ``BkTxCd/Domn/Cd`` (the domain).
+    """
+    flat = _find_text(ntry_elem, "BkTxCd") or _find_text(ntry_elem, "Prtry")
+    bk_tx_cd = _first(ntry_elem, "BkTxCd")
+    if flat or bk_tx_cd is None:
+        return flat
+    for parent in ("Prtry", "Domn"):
+        node = _first(bk_tx_cd, parent)
+        code = _find_text(node, "Cd")
+        if code:
+            return code
+    return None

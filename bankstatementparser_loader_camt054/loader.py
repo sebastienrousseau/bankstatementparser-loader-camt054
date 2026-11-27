@@ -20,6 +20,7 @@ from bankstatementparser.record_types import SummaryRecord
 from bankstatementparser.transaction_models import Transaction
 
 from ._xml import (
+    _bank_transaction_code,
     _clean_tag,
     _extract_account_id,
     _extract_party_name,
@@ -168,9 +169,7 @@ def _process_entry(
     val_dt = _find_date(ntry_elem, "ValDt") or bookg_dt
 
     # Bank transaction code
-    bk_tx_cd = _find_text(ntry_elem, "BkTxCd") or _find_text(
-        ntry_elem, "Prtry"
-    )
+    bk_tx_cd = _bank_transaction_code(ntry_elem)
     ref = _find_text(ntry_elem, "AcctSvcrRef")
 
     base_entry: dict[str, Any] = {

@@ -4,9 +4,8 @@
     "cyclomatic": 13
   },
   "bankstatementparser_loader_camt054/loader.py::_process_entry": {
-    "cognitive": 21,
-    "cyclomatic": 20,
-    "lines": 61
+    "cognitive": 20,
+    "cyclomatic": 19
   },
   "bankstatementparser_loader_camt054/loader.py::_process_tx_detail": {
     "cyclomatic": 13
