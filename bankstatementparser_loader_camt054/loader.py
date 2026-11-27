@@ -6,10 +6,9 @@
 from __future__ import annotations
 
 import os
-import re
 import xml.etree.ElementTree as ET  # nosec B405
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -20,65 +19,16 @@ from bankstatementparser.base_parser import BankStatementParser
 from bankstatementparser.record_types import SummaryRecord
 from bankstatementparser.transaction_models import Transaction
 
+from ._xml import (
+    _clean_tag,
+    _extract_account_id,
+    _extract_party_name,
+    _find_date,
+    _find_text,
+    _parse_amount,
+)
+
 SOURCE = "camt054"
-
-# An ISO 20022 amount: unsigned ASCII digits with an optional decimal
-# part (the sign is CdtDbtInd's). Decimal() also takes NaN, Infinity,
-# exponents, "_" separators, a sign and other scripts' digits.
-_AMOUNT = re.compile(r"[0-9]+(?:\.[0-9]+)?")
-
-
-def _parse_amount(text: str) -> Decimal | None:
-    """Return ``text`` as a ``Decimal``, or ``None`` if it is no amount."""
-    clean = text.strip()
-    return Decimal(clean) if _AMOUNT.fullmatch(clean) else None
-
-
-def _clean_tag(elem: ET.Element) -> str:
-    """Extract the local XML tag name without namespace."""
-    tag = elem.tag
-    if "}" in tag:
-        return tag.split("}", 1)[1]
-    return tag
-
-
-def _find_text(elem: ET.Element | None, tag_name: str) -> str | None:
-    """Find text of the first descendant element matching local tag_name."""
-    if elem is None:
-        return None
-    for child in elem.iter():
-        if _clean_tag(child) == tag_name and child.text:
-            val = child.text.strip()
-            if val:
-                return val
-    return None
-
-
-def _find_date(elem: ET.Element | None, parent_tag: str) -> date | None:
-    """Find date inside a parent node (e.g. BookgDt/Dt or ValDt/Dt)."""
-    if elem is None:
-        return None
-    for child in elem.iter():
-        if _clean_tag(child) == parent_tag:
-            dt_str = _find_text(child, "Dt") or _find_text(child, "DtTm")
-            if dt_str:
-                return _parse_iso_date(dt_str)
-            if child.text and child.text.strip():
-                return _parse_iso_date(child.text.strip())
-    return None
-
-
-def _parse_iso_date(date_str: str | None) -> date | None:
-    """Parse ISO 8601 date string."""
-    if not date_str:
-        return None
-    clean = date_str.strip()
-    if len(clean) >= 10 and clean[4] == "-" and clean[7] == "-":
-        try:
-            return date.fromisoformat(clean[:10])
-        except ValueError:
-            return None
-    return None
 
 
 @dataclass(frozen=True)
@@ -107,23 +57,6 @@ class Camt054SummaryRecord(SummaryRecord, total=False):
     entry_count: int
     total_credit: float
     total_debit: float
-
-
-def _extract_account_id(acct_elem: ET.Element | None) -> str | None:
-    """Extract IBAN or Other ID from an Acct XML element."""
-    if acct_elem is None:
-        return None
-    iban = _find_text(acct_elem, "IBAN")
-    if iban:
-        return iban
-    return _find_text(acct_elem, "Id")
-
-
-def _extract_party_name(party_elem: ET.Element | None) -> str | None:
-    """Extract entity name from a party XML node."""
-    if party_elem is None:
-        return None
-    return _find_text(party_elem, "Nm")
 
 
 def _apply_detail_amount(

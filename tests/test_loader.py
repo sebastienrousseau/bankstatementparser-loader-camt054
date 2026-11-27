@@ -22,7 +22,7 @@ from bankstatementparser_loader_camt054 import (
     load_camt054_file,
     summarize_camt054,
 )
-from bankstatementparser_loader_camt054.loader import (
+from bankstatementparser_loader_camt054._xml import (
     _clean_tag,
     _extract_account_id,
     _extract_party_name,
