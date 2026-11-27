@@ -22,7 +22,7 @@ from bankstatementparser_loader_camt054 import (
     load_camt054_file,
     summarize_camt054,
 )
-from bankstatementparser_loader_camt054.loader import (
+from bankstatementparser_loader_camt054._xml import (
     _clean_tag,
     _extract_account_id,
     _extract_party_name,
@@ -112,7 +112,7 @@ def _sample_camt054_xml() -> str:
 
 def test_version() -> None:
     """Verifies that version is exposed and semantic."""
-    assert __version__ == "0.0.35"
+    assert __version__ == "0.0.36"
 
 
 def test_load_camt054_full_payload() -> None:

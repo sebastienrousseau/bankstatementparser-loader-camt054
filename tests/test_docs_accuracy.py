@@ -3,7 +3,11 @@
 
 """Documentation verification tests for CAMT.054 loader."""
 
+import re
 from decimal import Decimal
+from pathlib import Path
+
+import pytest
 
 from bankstatementparser_loader_camt054 import load_camt054, summarize_camt054
 
@@ -32,3 +36,19 @@ def test_readme_examples() -> None:
     summary = summarize_camt054(sample)
     assert summary.message_id == "MSG-2026-001"
     assert summary.entry_count == 1
+
+
+def test_readme_quick_start_prints_what_it_says(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The in-memory Quick Start runs and prints its ``# `` comments."""
+    readme = Path(__file__).resolve().parent.parent / "README.md"
+    blocks = re.findall(
+        r"```python\n(.*?)```", readme.read_text(encoding="utf-8"), re.S
+    )
+    (block,) = [b for b in blocks if "payload" in b]
+    expected = [
+        line[2:] for line in block.splitlines() if line.startswith("# ")
+    ]
+    exec(compile(block, "README.md", "exec"), {})
+    assert capsys.readouterr().out.splitlines() == expected

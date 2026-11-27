@@ -8,7 +8,7 @@ from __future__ import annotations
 import os
 import xml.etree.ElementTree as ET  # nosec B405
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -18,55 +18,19 @@ import pandas as pd
 from bankstatementparser.base_parser import BankStatementParser
 from bankstatementparser.record_types import SummaryRecord
 from bankstatementparser.transaction_models import Transaction
+from defusedxml import DefusedXmlException
+
+from ._xml import (
+    _bank_transaction_code,
+    _clean_tag,
+    _extract_account_id,
+    _extract_party_name,
+    _find_date,
+    _find_text,
+    _parse_amount,
+)
 
 SOURCE = "camt054"
-
-
-def _clean_tag(elem: ET.Element) -> str:
-    """Extract the local XML tag name without namespace."""
-    tag = elem.tag
-    if "}" in tag:
-        return tag.split("}", 1)[1]
-    return tag
-
-
-def _find_text(elem: ET.Element | None, tag_name: str) -> str | None:
-    """Find text of the first descendant element matching local tag_name."""
-    if elem is None:
-        return None
-    for child in elem.iter():
-        if _clean_tag(child) == tag_name and child.text:
-            val = child.text.strip()
-            if val:
-                return val
-    return None
-
-
-def _find_date(elem: ET.Element | None, parent_tag: str) -> date | None:
-    """Find date inside a parent node (e.g. BookgDt/Dt or ValDt/Dt)."""
-    if elem is None:
-        return None
-    for child in elem.iter():
-        if _clean_tag(child) == parent_tag:
-            dt_str = _find_text(child, "Dt") or _find_text(child, "DtTm")
-            if dt_str:
-                return _parse_iso_date(dt_str)
-            if child.text and child.text.strip():
-                return _parse_iso_date(child.text.strip())
-    return None
-
-
-def _parse_iso_date(date_str: str | None) -> date | None:
-    """Parse ISO 8601 date string."""
-    if not date_str:
-        return None
-    clean = date_str.strip()
-    if len(clean) >= 10 and clean[4] == "-" and clean[7] == "-":
-        try:
-            return date.fromisoformat(clean[:10])
-        except ValueError:
-            return None
-    return None
 
 
 @dataclass(frozen=True)
@@ -97,21 +61,33 @@ class Camt054SummaryRecord(SummaryRecord, total=False):
     total_debit: float
 
 
-def _extract_account_id(acct_elem: ET.Element | None) -> str | None:
-    """Extract IBAN or Other ID from an Acct XML element."""
-    if acct_elem is None:
-        return None
-    iban = _find_text(acct_elem, "IBAN")
-    if iban:
-        return iban
-    return _find_text(acct_elem, "Id")
+def _apply_detail_amount(
+    tx_elem: ET.Element, base_entry: dict[str, Any], row: dict[str, Any]
+) -> None:
+    """Override ``row``'s amount with the detail's own, if it has one.
 
-
-def _extract_party_name(party_elem: ET.Element | None) -> str | None:
-    """Extract entity name from a party XML node."""
-    if party_elem is None:
-        return None
-    return _find_text(party_elem, "Nm")
+    The first ``TxAmt`` or ``Amt`` with text in ``tx_elem`` is the
+    detail amount, signed like the entry. One that is not an ISO 20022
+    decimal is ignored, keeping the entry's amount and currency.
+    """
+    amt_elem = next(
+        (
+            child
+            for child in tx_elem.iter()
+            if _clean_tag(child) in ("TxAmt", "Amt")
+            and child.text
+            and child.text.strip()
+        ),
+        None,
+    )
+    if amt_elem is None or amt_elem.text is None:
+        return
+    val = _parse_amount(amt_elem.text)
+    if val is None:
+        return
+    row["amount"] = val if base_entry.get("is_credit", True) else -val
+    if "Ccy" in amt_elem.attrib:
+        row["currency"] = amt_elem.attrib["Ccy"]
 
 
 def _process_tx_detail(
@@ -133,25 +109,7 @@ def _process_tx_detail(
     )
     row["mandate_id"] = mndt_id
 
-    # Amount override if present in transaction detail
-    amt_elem = None
-    for child in tx_elem.iter():
-        if (
-            _clean_tag(child) in ("TxAmt", "Amt")
-            and child.text
-            and child.text.strip()
-        ):
-            amt_elem = child
-            break
-    if amt_elem is not None and amt_elem.text:
-        try:
-            val = Decimal(amt_elem.text.strip())
-            is_credit = base_entry.get("is_credit", True)
-            row["amount"] = val if is_credit else -val
-            if "Ccy" in amt_elem.attrib:
-                row["currency"] = amt_elem.attrib["Ccy"]
-        except Exception:  # noqa: S110 # nosec B110
-            pass
+    _apply_detail_amount(tx_elem, base_entry, row)
 
     # Counterparty details
     for child in tx_elem.iter():
@@ -198,9 +156,8 @@ def _process_entry(
     if amt_elem is None or not amt_elem.text:
         return
 
-    try:
-        raw_amt = Decimal(amt_elem.text.strip())
-    except Exception:
+    raw_amt = _parse_amount(amt_elem.text)
+    if raw_amt is None:
         return
 
     currency = amt_elem.attrib.get("Ccy") or default_currency or "EUR"
@@ -213,9 +170,7 @@ def _process_entry(
     val_dt = _find_date(ntry_elem, "ValDt") or bookg_dt
 
     # Bank transaction code
-    bk_tx_cd = _find_text(ntry_elem, "BkTxCd") or _find_text(
-        ntry_elem, "Prtry"
-    )
+    bk_tx_cd = _bank_transaction_code(ntry_elem)
     ref = _find_text(ntry_elem, "AcctSvcrRef")
 
     base_entry: dict[str, Any] = {
@@ -245,16 +200,31 @@ def _process_entry(
         results.append(base_entry)
 
 
+def _parse_root(xml_content: str | bytes) -> ET.Element:
+    """Parse a document with defusedxml and return its root element.
+
+    Raises ``ET.ParseError`` for a document that is not well-formed,
+    including one declaring an encoding Python does not know (expat
+    looks it up in Python's codecs: ``LookupError``) or a multi-byte
+    one expat cannot use (``ValueError``). defusedxml's own refusals,
+    also ``ValueError``s, pass through unchanged.
+    """
+    if isinstance(xml_content, str):
+        xml_content = xml_content.encode("utf-8")
+    try:
+        root: ET.Element = DefusedET.fromstring(xml_content)
+    except DefusedXmlException:
+        raise
+    except (LookupError, ValueError) as exc:
+        raise ET.ParseError(f"unreadable XML encoding: {exc}") from exc
+    return root
+
+
 def _parse_camt054_xml(
     xml_content: str | bytes,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """Parse CAMT.054 XML payload into header metadata and transaction rows."""
-    if isinstance(xml_content, str):
-        xml_bytes = xml_content.encode("utf-8")
-    else:
-        xml_bytes = xml_content
-
-    root = DefusedET.fromstring(xml_bytes)
+    root = _parse_root(xml_content)
 
     header: dict[str, Any] = {
         "message_id": _find_text(root, "MsgId"),
