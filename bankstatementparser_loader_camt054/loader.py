@@ -18,6 +18,7 @@ import pandas as pd
 from bankstatementparser.base_parser import BankStatementParser
 from bankstatementparser.record_types import SummaryRecord
 from bankstatementparser.transaction_models import Transaction
+from defusedxml import DefusedXmlException
 
 from ._xml import (
     _bank_transaction_code,
@@ -199,16 +200,31 @@ def _process_entry(
         results.append(base_entry)
 
 
+def _parse_root(xml_content: str | bytes) -> ET.Element:
+    """Parse a document with defusedxml and return its root element.
+
+    Raises ``ET.ParseError`` for a document that is not well-formed,
+    including one declaring an encoding Python does not know (expat
+    looks it up in Python's codecs: ``LookupError``) or a multi-byte
+    one expat cannot use (``ValueError``). defusedxml's own refusals,
+    also ``ValueError``s, pass through unchanged.
+    """
+    if isinstance(xml_content, str):
+        xml_content = xml_content.encode("utf-8")
+    try:
+        root: ET.Element = DefusedET.fromstring(xml_content)
+    except DefusedXmlException:
+        raise
+    except (LookupError, ValueError) as exc:
+        raise ET.ParseError(f"unreadable XML encoding: {exc}") from exc
+    return root
+
+
 def _parse_camt054_xml(
     xml_content: str | bytes,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """Parse CAMT.054 XML payload into header metadata and transaction rows."""
-    if isinstance(xml_content, str):
-        xml_bytes = xml_content.encode("utf-8")
-    else:
-        xml_bytes = xml_content
-
-    root = DefusedET.fromstring(xml_bytes)
+    root = _parse_root(xml_content)
 
     header: dict[str, Any] = {
         "message_id": _find_text(root, "MsgId"),

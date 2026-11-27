@@ -1,7 +1,7 @@
 {
   "bankstatementparser_loader_camt054/loader.py::_parse_camt054_xml": {
-    "cognitive": 22,
-    "cyclomatic": 13
+    "cognitive": 20,
+    "cyclomatic": 12
   },
   "bankstatementparser_loader_camt054/loader.py::_process_entry": {
     "cognitive": 20,

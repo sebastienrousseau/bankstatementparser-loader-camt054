@@ -24,6 +24,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `ValidationError` and `summarize_camt054` as
   `decimal.InvalidOperation` or an infinite total, `1e5` loaded as
   100000, and `-5` on a credit as a debit.
+- A document declaring an encoding Python does not know (for example
+  `encoding="UT--8"`) or a multi-byte one expat cannot use (for example
+  `shift_jis`) now raises `xml.etree.ElementTree.ParseError`, like any
+  other document that is not well-formed, instead of `LookupError` or
+  `ValueError`. Found by the new Atheris target.
 
 ### Added
 
