@@ -7,6 +7,80 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.36] - 2026-11-27
+
+### Fixed
+
+- A schema-valid notification now has a category: the loader read the
+  bank transaction code only as text directly inside `BkTxCd` or
+  `Prtry`, but ISO 20022 nests it (`BkTxCd/Prtry/Cd`,
+  `BkTxCd/Domn/Cd`). Entries carrying a code gain
+  `category="camt054:<code>"`, and their description starts with the
+  code, as the loader always intended.
+- An amount that is not an ISO 20022 decimal (unsigned ASCII digits
+  with an optional fraction) is now treated like any other unreadable
+  amount: the entry is skipped, or a detail amount ignored. Before,
+  `NaN` and `Infinity` escaped `load_camt054` as a pydantic
+  `ValidationError` and `summarize_camt054` as
+  `decimal.InvalidOperation` or an infinite total, `1e5` loaded as
+  100000, and `-5` on a credit as a debit.
+
+### Added
+
+- An Atheris fuzz target, `fuzz/fuzz_load_camt054.py`, for
+  `load_camt054` and `summarize_camt054`, with a seed corpus; it fails
+  on any exception but the XML parser's documented ones, on a malformed
+  `Transaction` and on a summary that disagrees with the load. CI runs
+  it for 120 s on every change; `make fuzz` locally.
+- `benches/bench_load_camt054.py`, a real benchmark of `load_camt054`
+  and `summarize_camt054` along entries per notification and
+  transactions per batched entry, replacing a file that timed an empty
+  loop. CI runs `--quick`; `docs/BENCHMARKS.md` records a full run with
+  its environment.
+- `tests/fixtures/notification.xml`, a camt.054.001.08 notification,
+  with a golden test.
+- A `Makefile` wrapping the local gates (`make check`).
+- A MkDocs Material user manual (`mkdocs.yml`, `docs/`) with an
+  mkdocstrings API reference, built with `--strict` on every pull
+  request and deployed to GitHub Pages from `main`
+  (`.github/workflows/docs.yml`, `make docs`). It replaces a Sphinx
+  configuration that nothing built.
+- `ARCHITECTURE.md`, `CODE_OF_CONDUCT.md`, `docs/POLICIES.md`,
+  `docs/BENCHMARKS.md`, `docs/COMPARISON.md`, `docs/format.md` and
+  `docs/suite.md`.
+- Signed releases: keyless cosign `.sig` and `.pem` per distribution,
+  SLSA provenance
+  (`bankstatementparser-loader-camt054-vX.Y.Z.intoto.jsonl`,
+  slsa-github-generator 2.1.0), CycloneDX and SPDX SBOMs and a licence
+  manifest on every GitHub release, and PEP 740 attestations on PyPI.
+- The OpenSSF Scorecard workflow, the suite's Docs Lint workflow
+  (`scripts/readme-check.sh` and markdownlint), a Security workflow
+  (Bandit and `pip-audit` on every locked set), the portfolio pull
+  request and issue templates, and `.github/demo.gif` rendered by
+  `make demo` from `.github/demo.tape`.
+- Hash-pinned requirement sets exported from the lock
+  (`requirements/{runtime,ci,fuzz,docs}.txt`, by the suite's
+  `scripts/export_locked_requirements.py`) and compiled release tooling
+  (`requirements/{build,sbom}.txt`).
+
+### Changed
+
+- Require `bankstatementparser >= 0.0.35`, the newest core release, and
+  align the version with the suite's 0.0.36 release; `poetry.lock`
+  moves core to 0.0.35.
+- Dev tools: ruff 0.17.6, mypy 2.4.1, pytest 9.2.0, hypothesis 6.168.5,
+  tomli 2.5.0 and pytest-benchmark 5.3.1 (Dependabot #4 to #9).
+- The XML helpers move from `loader.py` to `_xml.py`, keeping
+  `loader.py` under the suite's 500-line ceiling.
+- CI pins every action by commit SHA, installs only the hashed lock
+  exports, and tests CPython 3.10 to 3.14 on Ubuntu, macOS and Windows.
+  Write permissions sit on the jobs that need them.
+- `README.md` follows the portfolio template; its Quick Start is run
+  by the tests. It no longer claims the loader extracts `InstrId` or
+  supports only listed schema versions (it matches local names, so any
+  version reads). The suite table moves to `docs/suite.md`.
+  `CONTRIBUTING.md` describes the steps that work in this repository.
+
 ## [0.0.35] - 2026-11-26
 
 The first release on PyPI. Versions 0.0.20 to 0.0.34 were never
