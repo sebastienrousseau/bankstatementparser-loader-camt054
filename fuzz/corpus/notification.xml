@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.054.001.08">
+  <BkToCstmrDbtCdtNtfctn>
+    <GrpHdr>
+      <MsgId>NTF-2026-0115-001</MsgId>
+      <CreDtTm>2026-01-15T09:30:00Z</CreDtTm>
+    </GrpHdr>
+    <Ntfctn>
+      <Id>NTF-01</Id>
+      <Acct>
+        <Id><IBAN>FR7630006000011234567890189</IBAN></Id>
+        <Ccy>EUR</Ccy>
+      </Acct>
+      <Ntry>
+        <Amt Ccy="EUR">1250.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <BookgDt><Dt>2026-01-15</Dt></BookgDt>
+        <ValDt><Dt>2026-01-16</Dt></ValDt>
+        <AcctSvcrRef>BANK-REF-1</AcctSvcrRef>
+        <BkTxCd><Prtry><Cd>SEPA-CT</Cd></Prtry></BkTxCd>
+        <NtryDtls>
+          <TxDtls>
+            <Refs><EndToEndId>INV-2026-101</EndToEndId></Refs>
+            <AmtDtls><TxAmt><Amt Ccy="EUR">1000.00</Amt></TxAmt></AmtDtls>
+            <RltdPties><Dbtr><Nm>ACME SARL</Nm></Dbtr></RltdPties>
+            <RmtInf><Ustrd>Invoice 101</Ustrd></RmtInf>
+          </TxDtls>
+          <TxDtls>
+            <Refs><EndToEndId>INV-2026-102</EndToEndId></Refs>
+            <AmtDtls><TxAmt><Amt Ccy="EUR">250.00</Amt></TxAmt></AmtDtls>
+            <RltdPties><Dbtr><Nm>BETA GMBH</Nm></Dbtr></RltdPties>
+            <RmtInf><Ustrd>Invoice 102</Ustrd></RmtInf>
+          </TxDtls>
+        </NtryDtls>
+      </Ntry>
+      <Ntry>
+        <Amt Ccy="EUR">89.90</Amt>
+        <CdtDbtInd>DBIT</CdtDbtInd>
+        <BookgDt><Dt>2026-01-15</Dt></BookgDt>
+        <AcctSvcrRef>BANK-REF-2</AcctSvcrRef>
+        <BkTxCd><Prtry><Cd>SEPA-DD</Cd></Prtry></BkTxCd>
+        <NtryDtls>
+          <TxDtls>
+            <Refs><EndToEndId>MANDATE-77</EndToEndId><MndtId>MNDT-77</MndtId></Refs>
+            <RltdPties><Cdtr><Nm>ENERGY CO</Nm></Cdtr></RltdPties>
+            <RmtInf><Ustrd>January electricity</Ustrd></RmtInf>
+          </TxDtls>
+        </NtryDtls>
+      </Ntry>
+    </Ntfctn>
+  </BkToCstmrDbtCdtNtfctn>
+</Document>
