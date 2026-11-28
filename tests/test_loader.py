@@ -112,7 +112,7 @@ def _sample_camt054_xml() -> str:
 
 def test_version() -> None:
     """Verifies that version is exposed and semantic."""
-    assert __version__ == "0.0.36"
+    assert __version__ == "0.0.37"
 
 
 def test_load_camt054_full_payload() -> None:
