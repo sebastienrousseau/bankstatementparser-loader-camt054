@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/sebastienrousseau/bankstatementparser-loader-camt054/main/.github/demo.gif" alt="A terminal printing bankstatementparser-loader-camt054 0.0.36, the amounts, codes and remittance lines of the repository's camt.054 fixture, then load_camt054_file splitting its batched credit into two transfers beside a Direct Debit" width="100%" />
+  <img src="https://raw.githubusercontent.com/sebastienrousseau/bankstatementparser-loader-camt054/main/.github/demo.gif" alt="A terminal printing bankstatementparser-loader-camt054 0.0.37, the amounts, codes and remittance lines of the repository's camt.054 fixture, then load_camt054_file splitting its batched credit into two transfers beside a Direct Debit" width="100%" />
 </p>
 
 ---
